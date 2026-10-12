@@ -1,0 +1,15 @@
+{
+  "name": "openclaw-claude-quota-resume",
+  "version": "0.3.1",
+  "description": "Queue and resume OpenClaw requests after Claude subscription quota limits.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "index.ts",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": ["openclaw", "claude", "quota", "retry"]
+}
