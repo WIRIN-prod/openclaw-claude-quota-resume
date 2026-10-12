@@ -11,5 +11,26 @@
     "LICENSE",
     "CHANGELOG.md"
   ],
-  "keywords": ["openclaw", "claude", "quota", "retry"]
+  "keywords": [
+    "openclaw",
+    "claude",
+    "quota",
+    "retry"
+  ],
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.9.9",
+      "minGatewayVersion": ">=2026.9.9"
+    },
+    "build": {
+      "openclawVersion": "2026.9.9",
+      "pluginSdkVersion": "2026.9.9"
+    }
+  },
+  "scripts": {
+    "test": "node --test"
+  }
 }
