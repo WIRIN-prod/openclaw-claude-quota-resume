@@ -200,37 +200,68 @@ export default definePluginEntry({
     }
     async function processQueue() {
       if (stopping || state.paused || busy) return;
-      const item = state.items.filter(x => x.status === "waiting" && x.nextAttemptAt <= Date.now())
-        .sort((a,b) => a.nextAttemptAt-b.nextAttemptAt || a.createdAt.localeCompare(b.createdAt))[0];
-      if (!item) { schedule(); return; }
-      busy = true; item.status = "running"; await persist();
+
+      const item = state.items
+        .filter(x => x.status === "waiting" && x.nextAttemptAt <= Date.now())
+        .sort((a, b) => a.nextAttemptAt - b.nextAttemptAt || a.createdAt.localeCompare(b.createdAt))[0];
+
+      if (!item) {
+        schedule();
+        return;
+      }
+
+      busy = true;
+      item.status = "running";
+
       try {
+        await persist();
+
         if (!item.prompt?.trim()) {
           item.status = "manual";
-          item.lastError = "Original prompt is missing; automatic replay was blocked to prevent running an unintended task. Recover the exact prompt, then re-queue it.";
+          item.lastError =
+            "Original prompt is missing; automatic replay was blocked to prevent running an unintended task.";
           api.logger.error(`Blocked queued request ${item.id}: original prompt missing.`);
           return;
         }
-        const prompt = item.prompt;
-        const result = await cli(["agent", "--session-key", item.sessionKey, "--agent", item.agentId, "--message", prompt, "--json"]);
+
+        const result = await cli([
+          "agent", "--session-key", item.sessionKey,
+          "--agent", item.agentId, "--message", item.prompt, "--json",
+        ]);
+
         if (result.code === 0 && !quotaError(result.output)) {
-          item.status = "done"; item.lastError = undefined;
+          item.status = "done";
+          item.lastError = undefined;
           api.logger.info(`Completed queued request ${item.id} for ${item.sessionKey}.`);
         } else if (quotaError(result.output)) {
-          item.attempts++; item.status = item.attempts >= MAX_ATTEMPTS ? "manual" : "waiting";
-          item.lastError = result.output.slice(-4000); item.nextAttemptAt = Date.now() + delay(item.attempts);
+          item.attempts++;
+          item.status = item.attempts >= MAX_ATTEMPTS ? "manual" : "waiting";
+          item.lastError = result.output.slice(-4000);
+          item.nextAttemptAt = Date.now() + delay(item.attempts);
           api.logger.warn(`Claude quota still exhausted for ${item.sessionKey}; retry scheduled.`);
         } else {
-          item.status = "manual"; item.lastError = result.output.slice(-4000) || `OpenClaw exited ${result.code}`;
+          item.status = "manual";
+          item.lastError = result.output.slice(-4000) || `OpenClaw exited ${result.code}`;
           api.logger.error(`Queued request ${item.id} needs manual review.`);
         }
       } catch (e) {
-        item.attempts++; item.status = item.attempts >= MAX_ATTEMPTS ? "manual" : "waiting";
-        item.lastError = str(e); item.nextAttemptAt = Date.now() + delay(item.attempts);
-      } finally { await persist(); busy = false; schedule(); }
+        // Execution may have reached the agent before the error occurred.
+        // Do not automatically replay an ambiguously completed request.
+        item.status = "manual";
+        item.lastError = `Ambiguous execution failure; automatic retry blocked to prevent duplicate work: ${str(e)}`;
+        api.logger.error(`Queue item ${item.id} moved to manual review after an ambiguous execution failure.`);
+      } finally {
+        try {
+          await persist();
+        } catch (e) {
+          api.logger.error(`Queue persistence failed: ${str(e)}`);
+        } finally {
+          busy = false;
+          schedule();
+        }
+      }
     }
 
-    // Capture each inbound request before the agent's final result.
     api.on("message_received", async (event: unknown, ctx: unknown) => {
       const key = sessionKey(event, ctx);
       const prompt = messageText(event) ?? userPromptFrom(event);
@@ -293,8 +324,21 @@ export default definePluginEntry({
             if (!key || !when) return {text: "Usage: /claude-quota retry <sessionKey> <ISO-8601-time>"};
             const dueAt = Date.parse(when);
             if (!Number.isFinite(dueAt)) return {text: `Invalid date: ${when}`};
-            const item = await enqueue({sessionKey: key, agentId: agentId(undefined, undefined, key), dueAt, error: "Manually scheduled retry"});
-            return {text: `Queued ${item.id.slice(0,8)} for ${key} at ${new Date(dueAt).toISOString()}.`};
+
+            const item = await enqueue({
+              sessionKey: key,
+              agentId: agentId(undefined, undefined, key),
+              dueAt,
+              error: "Manual retry requested, but the original prompt was not supplied.",
+            });
+            item.status = "manual";
+            item.lastError = "Manual retry requires the exact original prompt. No automatic replay was scheduled.";
+            await persist();
+            schedule();
+
+            return {
+              text: `Created ${item.id.slice(0,8)} for ${key}, but left it in manual review: the original prompt is required.`,
+            };
           }
           default:
             return {text: "Commands: status | pause | resume | clear [id-prefix] | retry <sessionKey> <ISO-8601-time>"};
