@@ -1,9 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-10-13
 
-Not yet released; the version in `package.json` is unchanged. Nothing here has been verified against a
-real quota reset.
+Nothing here has been verified against a real quota reset.
 
 ### Safety
 
