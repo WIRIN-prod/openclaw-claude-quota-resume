@@ -2,24 +2,41 @@
   "id": "claude-quota-resume",
   "name": "Claude Quota Resume",
   "description": "Queues original prompts after Claude subscription quota errors and schedules retries at detected reset times.",
+  "categories": [
+    "infrastructure"
+  ],
   "version": "0.3.1",
   "configSchema": {
     "type": "object",
     "properties": {
       "statePath": {
-        "type": "string"
-      },
-      "defaultSessionKey": {
-        "type": "string"
+        "type": "string",
+        "description": "Queue file path. Default ~/.openclaw/state/claude-quota-resume/queue.json"
       },
       "initialRetryMs": {
         "type": "number",
-        "minimum": 1000
+        "minimum": 1000,
+        "maximum": 3600000,
+        "description": "First fallback retry delay when no reset time is reported (doubles per attempt, max 1 hour). Default 300000."
+      },
+      "maxAttempts": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1000,
+        "description": "Quota retries before an item goes to manual review. Default 50."
+      },
+      "defaultSessionKey": {
+        "type": "string",
+        "description": "Deprecated and ignored."
       },
       "retryOnUnknownFailure": {
-        "type": "boolean"
+        "type": "boolean",
+        "description": "Deprecated and ignored: non-quota failures always go to manual review."
       }
     },
     "additionalProperties": false
+  },
+  "activation": {
+    "onStartup": true
   }
 }

@@ -6,13 +6,20 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  package-checks:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node --test
-      - run: node -e "JSON.parse(require('fs').readFileSync('package.json')); JSON.parse(require('fs').readFileSync('openclaw.plugin.json'))"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: git diff --exit-code
+      - name: Package contents
+        run: npm pack --dry-run

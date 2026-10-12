@@ -11,3 +11,14 @@ queue.json.*
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+# local artifacts: packed tarballs, archives, editor/patch leftovers, backups
+*.tgz
+*.zip
+*.orig
+*.rej
+*.bak
+*.backup
+*.backup-*
+*.prebuild-backup
+*.tmp
+.tmp/
