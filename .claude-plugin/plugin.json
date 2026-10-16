@@ -1,0 +1,10 @@
+{
+  "name": "quota-resume",
+  "version": "1.0.0",
+  "description": "Status and setup helpers for Claude Code's native usage-limit auto-continue.",
+  "author": {
+    "name": "WIRIN-prod"
+  },
+  "license": "MIT",
+  "keywords": ["quota", "usage-limit", "resume"]
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## Claude Code plugin 1.0.0 - 2026-10-16
+
+- Added a Claude Code marketplace plugin using the native usage-limit auto-continue behavior.
+- Added user-scoped install metadata, setup/status commands, and hooks for quota and auto-resume events.
+- Status events contain only an event name and timestamp and are stored with private file permissions.
+- Preserved the OpenClaw Gateway plugin as a separate legacy integration.
+
 ## 0.4.0 - 2026-10-13
 
 Nothing here has been verified against a real quota reset.
